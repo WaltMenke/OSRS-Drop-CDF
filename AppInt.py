@@ -5,6 +5,8 @@ import plotly.express as px
 import pandas as pd
 import sys
 
+print(sys.path)
+
 monsters = monsters_api.load()
 
 app = Dash(__name__)
@@ -24,7 +26,7 @@ def update_dropdown_options(monster):
     if monster:
         monster_found = search_monster(monster)
         if monster_found:
-            items = monster_found.drops
+            items = get_drops(monster_found)
             options = [{"label": item, "value": item} for item in items]
             return options
         else:
@@ -35,7 +37,7 @@ def update_dropdown_options(monster):
 
 def search_monster(monster_in):
     all_db_monsters = monsters_api.load()
-    srch_monstr = next(
+    search_monster = next(
         (
             monster
             for monster in all_db_monsters
@@ -44,8 +46,13 @@ def search_monster(monster_in):
         None,
     )
 
-    if srch_monstr:
-        return srch_monstr.name
+    if search_monster:
+        return search_monster.name
+
+
+def get_drops(monster):
+    drops = [item.name for item in monster.drops]
+    return drops
 
 
 # @callback(Output("graph-content", "figure"), Input("dropdown-selection", "value"))

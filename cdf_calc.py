@@ -7,6 +7,14 @@ app = Dash(__name__)
 all_monsters = monsters_api.load()
 
 MAX_KILLS = 5000
+RARITY_SPECS = {
+    "Always": {"color": "#AFEEE", "range": (1 / 1, 1 / 1)},
+    "Common": {"color": "#56E156", "range": (1 / 2, 1 / 25)},
+    "Uncommon": {"color": "#FFED4C", "range": (1 / 26, 1 / 99)},
+    "Rare": {"color": "#FF863C", "range": (1 / 100, 1 / 999)},
+    "Very rare": {"color": "#FF6262", "range": (1 / 1000,)},
+    "Varies": {"color": "#FFA3FF", "range": None},
+}
 
 
 def get_all_monsters(database):
@@ -36,12 +44,16 @@ app.layout = html.Div(
             },
         ),
         html.H4(
-            children="Select or type in an enemy below", style={"textAlign": "center"}
+            children="Select or type in an enemy below",
+            style={
+                "textAlign": "center",
+                "backgroundColor": "#f2f2f2",
+            },
         ),
         dcc.Dropdown(
             options=get_all_monsters(all_monsters),
             value=None,
-            id="text-entry",
+            id="enemy-entry",
             multi=False,
             style={
                 "textAlign": "center",
@@ -51,7 +63,10 @@ app.layout = html.Div(
         ),
         html.H4(
             children="Select or type in the drop you'd like to test",
-            style={"textAlign": "center"},
+            style={
+                "textAlign": "center",
+                "backgroundColor": "#f2f2f2",
+            },
         ),
         dcc.Dropdown(
             value=None,
@@ -65,7 +80,10 @@ app.layout = html.Div(
         ),
         html.H4(
             children="Drag the slider to select the simulated kill count",
-            style={"textAlign": "center"},
+            style={
+                "textAlign": "center",
+                "backgroundColor": "#f2f2f2",
+            },
         ),
         dcc.Slider(
             0,
@@ -77,7 +95,10 @@ app.layout = html.Div(
         ),
         html.H4(
             children="What drop percentage would you like to test?",
-            style={"textAlign": "center"},
+            style={
+                "textAlign": "center",
+                "backgroundColor": "#f2f2f2",
+            },
         ),
         dcc.Slider(
             1,
@@ -87,13 +108,22 @@ app.layout = html.Div(
             id="drop-test",
             tooltip={"placement": "top", "always_visible": True},
         ),
+        html.Div(
+            id="info-div",
+            children=[],
+            style={
+                "textAlign": "center",
+                "whiteSpace": "pre-line",
+                "justifyContent": "left",
+            },
+        ),
         dcc.Graph(id="graph-cdf"),
     ],
     className="justify-content-center",
 )
 
 
-@app.callback(Output("item-dropdown", "options"), [Input("text-entry", "value")])
+@app.callback(Output("item-dropdown", "options"), [Input("enemy-entry", "value")])
 def update_monster_options(monster):
     if monster:
         monster_found = search_monster(monster)
@@ -142,7 +172,7 @@ def search_monster(monster_in):
 @app.callback(
     Output("graph-cdf", "figure"),
     [
-        Input("text-entry", "value"),
+        Input("enemy-entry", "value"),
         Input("item-dropdown", "value"),
         Input("kill-count", "value"),
         Input("drop-test", "value"),
@@ -155,7 +185,6 @@ def calculate_cdf(selected_enemy, selected_drop, num_kills, drop_chance):
             drops = get_drops(find_monster)
 
         rarity = get_rarity(drops, selected_drop)
-        cdf_values = drop_cdf(rarity, num_kills)
 
         data = {
             "Number of Kill Attempts (n)": range(1, num_kills + 1),
@@ -169,7 +198,7 @@ def calculate_cdf(selected_enemy, selected_drop, num_kills, drop_chance):
             kill_threshold = filt_df.iloc[0, 0]
             cdf_output = f"{drop_chance}% chance of receiving at least one {selected_drop} (1/{int(1/rarity)}) from {selected_enemy} at {kill_threshold} kills!"
         else:
-            complement_probability = filt_df.iloc[0 - 1]
+            complement_probability = filt_df.iloc[-1, 0]
             cdf_output = f"Yikes! Less than {complement_probability}% chance to receive at least one {selected_drop} (1/{int(1/rarity)}) from {selected_enemy} at {num_kills} kills."
 
         fig = px.line(
@@ -184,6 +213,45 @@ def calculate_cdf(selected_enemy, selected_drop, num_kills, drop_chance):
         return {
             "layout": {"title": "Select an enemy, item, and kill count to plot the CDF"}
         }
+
+
+@app.callback(
+    Output("info-div", "children"),
+    [
+        Input("enemy-entry", "value"),
+        Input("item-dropdown", "value"),
+        Input("kill-count", "value"),
+    ],
+)
+def update_info(selected_enemy, selected_drop, num_kills):
+    if selected_enemy and selected_drop and num_kills != 0:
+        find_monster = search_monster(selected_enemy)
+        if find_monster:
+            drops = get_drops(find_monster)
+
+        rarity = get_rarity(drops, selected_drop)
+        for rarity_level, specs in RARITY_SPECS.items():
+            if specs["range"] and (int(1 / rarity)) <= specs["range"][0]:
+                rarity_color = specs["color"]
+                break
+            else:
+                rarity_color = "black"
+        rarity = f"1/{int(1/rarity)}"
+        return [
+            "ENEMY: ",
+            selected_enemy,
+            html.Br(),
+            "DROP: ",
+            selected_drop,
+            html.Br(),
+            html.Span("RARITY: ", style={"color": rarity_color}),
+            html.Span(str(rarity), style={"color": rarity_color}),
+            html.Br(),
+            "KILL COUNT: ",
+            str(num_kills),
+        ]
+    else:
+        return []
 
 
 if __name__ == "__main__":

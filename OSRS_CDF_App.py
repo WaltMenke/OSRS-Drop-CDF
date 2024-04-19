@@ -11,7 +11,7 @@ MAX_KILLS = 5000
 RARITY_SPECS = {
     "Always": {"color": "#AFEEEE", "range": (1 / 1, 1 / 1)},
     "Common": {"color": "#56E156", "range": (1 / 2, 1 / 25)},
-    "Uncommon": {"color": "#FFED4C", "range": (1 / 26, 1 / 99)},
+    "Uncommon": {"color": "#FFDF00", "range": (1 / 26, 1 / 99)},
     "Rare": {"color": "#FF863C", "range": (1 / 100, 1 / 999)},
     "Very rare": {"color": "#FF6262", "range": (1 / 1000, 0)},
 }
@@ -47,6 +47,7 @@ app.layout = html.Div(
             style={
                 "textAlign": "center",
                 "backgroundColor": "#f2f2f2",
+                "fontFamily": "Helvetica",
             },
         ),
         dcc.Dropdown(
@@ -65,6 +66,7 @@ app.layout = html.Div(
             style={
                 "textAlign": "center",
                 "backgroundColor": "#f2f2f2",
+                "fontFamily": "Helvetica",
             },
         ),
         dcc.Dropdown(
@@ -82,6 +84,7 @@ app.layout = html.Div(
             style={
                 "textAlign": "center",
                 "backgroundColor": "#f2f2f2",
+                "fontFamily": "Helvetica",
             },
         ),
         dcc.Slider(
@@ -97,6 +100,7 @@ app.layout = html.Div(
             style={
                 "textAlign": "center",
                 "backgroundColor": "#f2f2f2",
+                "fontFamily": "Helvetica",
             },
         ),
         dcc.Slider(
@@ -188,27 +192,30 @@ def plot_cdf(selected_enemy, selected_drop, num_kills, drop_chance):
         rarity = get_rarity(drops, selected_drop)
 
         data = {
-            "Number of Kill Attempts (n)": range(1, num_kills + 1),
+            "Number of Kill Attempts": range(1, num_kills + 1),
             "Cumulative Probability": [
                 calculate_cdf(rarity, i) for i in range(1, num_kills + 1)
             ],
         }
         df = pd.DataFrame(data)
         filt_df = df[df["Cumulative Probability"] > int(drop_chance) / 100]
-        if not filt_df.empty:
+        if int(rarity) == 1:
+            cdf_output = f"You always get {selected_drop} from {selected_enemy}!"
+            hit_rate = 1
+        elif not filt_df.empty:
             kill_threshold = filt_df.iloc[0, 0]
             cdf_output = f"{drop_chance}% chance of receiving at least one {selected_drop} from {selected_enemy} at {kill_threshold} kills!"
             hit_rate = 1
         elif int(round(df.iloc[-1, -1] * 100, 0)) != int(drop_chance):
             most_likely_probability = df.iloc[-1, -1]
-            cdf_output = f"Uh-oh! You only have a {int(round(most_likely_probability*100, 0))}% chance to receive at least one {selected_drop} from {selected_enemy} at {num_kills} kills."
+            cdf_output = f"Uh-oh! You don't have {drop_chance}%, you have {int(round(most_likely_probability*100, 0))}% chance to receive at least one {selected_drop} from {selected_enemy} at {num_kills} kills."
             hit_rate = 0
 
         rarity_color, _ = get_rarity_color(rarity)
         rarity_color = [rarity_color]
         fig = px.line(
             df,
-            x="Number of Kill Attempts (n)",
+            x="Number of Kill Attempts",
             y="Cumulative Probability",
             title=cdf_output,
             color_discrete_sequence=rarity_color,
@@ -272,14 +279,22 @@ def instance_info(selected_enemy, selected_drop, num_kills):
             html.Br(),
             html.Br(),
             html.Br(),
-            html.Span("RARITY: ", style={"background-color": rarity_color}),
+            html.Span(
+                "RARITY: ",
+                style={
+                    "background-color": rarity_color,
+                    "font-size": "20px",
+                    "fontFamily": "Helvetica",
+                },
+            ),
             html.Span(
                 f"{rarity} ({rarity_category})",
-                style={"background-color": rarity_color},
+                style={
+                    "background-color": rarity_color,
+                    "font-size": "20px",
+                    "fontFamily": "Helvetica",
+                },
             ),
-            html.Br(),
-            "KILL COUNT: ",
-            str(num_kills),
         ]
     else:
         return []

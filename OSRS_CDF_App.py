@@ -3,6 +3,7 @@ from dash import Dash, html, dcc, callback, Output, Input
 import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd
+import numpy as np
 
 app = Dash(__name__)
 all_monsters = monsters_api.load()
@@ -90,7 +91,9 @@ app.layout = html.Div(
         dcc.Slider(
             0,
             MAX_KILLS,
-            marks={i: str(i) for i in range(1, MAX_KILLS + 1) if i % 1000 == 0},
+            marks={
+                i: str(i) for i in range(1, MAX_KILLS + 1) if i % 250 == 0 or i == 1
+            },
             value=500,
             id="kill-count",
             tooltip={"placement": "top", "always_visible": True},
@@ -105,8 +108,10 @@ app.layout = html.Div(
         ),
         dcc.Slider(
             1,
-            100,
-            marks={i: f"{i}%" for i in range(1, 101) if i % 10 == 0},
+            99,
+            marks={
+                i: f"{i}%" for i in range(1, 100) if i % 10 == 0 or i == 1 or i == 99
+            },
             value=80,
             id="drop-test",
             tooltip={"placement": "top", "always_visible": True},
@@ -120,9 +125,8 @@ app.layout = html.Div(
                 "justifyContent": "left",
             },
         ),
-        dcc.Graph(
-            id="graph-cdf",
-        ),
+        dcc.Graph(id="graph-cdf", style={"width": "80%", "margin": "auto"}),
+        dcc.Graph(id="graph-hist", style={"width": "80%", "margin": "auto"}),
     ],
     className="justify-content-center",
 )
@@ -164,6 +168,13 @@ def get_rarity(drops_in, selected_drop):
         return get_drop.rarity
 
 
+def get_rarity_color(rarity):
+    for category, specs in RARITY_SPECS.items():
+        if specs["range"][0] >= rarity >= (specs["range"][1]):
+            return specs["color"], category
+    return "black", "Unknown"
+
+
 def search_monster(monster_in):
     found_monster = next(
         (monster for monster in all_monsters if monster.name == monster_in),
@@ -172,6 +183,19 @@ def search_monster(monster_in):
 
     if found_monster:
         return found_monster
+
+
+def run_simulation(rarity, num_kills, simulation_amount):
+    output = []
+    for _ in range(simulation_amount):
+        binom_gen = np.random.default_rng()
+        kills_to_drop = binom_gen.geometric(rarity, size=num_kills)
+        if 1 not in kills_to_drop:
+            output.append(num_kills)
+        else:
+            output.append(list(kills_to_drop).index(1) + 1)
+    output = pd.DataFrame(output, columns=["Kills to Drop"])
+    return output
 
 
 @app.callback(
@@ -183,7 +207,7 @@ def search_monster(monster_in):
         Input("drop-test", "value"),
     ],
 )
-def plot_cdf(selected_enemy, selected_drop, num_kills, drop_chance):
+def plot_cdf(selected_enemy, selected_drop, num_kills, chance_input):
     if selected_enemy and selected_drop and num_kills != 0:
         find_monster = search_monster(selected_enemy)
         if find_monster:
@@ -198,17 +222,17 @@ def plot_cdf(selected_enemy, selected_drop, num_kills, drop_chance):
             ],
         }
         df = pd.DataFrame(data)
-        filt_df = df[df["Cumulative Probability"] > int(drop_chance) / 100]
+        filt_df = df[df["Cumulative Probability"] > int(chance_input) / 100]
         if int(rarity) == 1:
             cdf_output = f"You always get {selected_drop} from {selected_enemy}!"
             hit_rate = 1
         elif not filt_df.empty:
             kill_threshold = filt_df.iloc[0, 0]
-            cdf_output = f"{drop_chance}% chance of receiving at least one {selected_drop} from {selected_enemy} at {kill_threshold} kills!"
+            cdf_output = f"{chance_input}% chance of receiving at least one {selected_drop} from {selected_enemy} at {kill_threshold} kills!"
             hit_rate = 1
-        elif int(round(df.iloc[-1, -1] * 100, 0)) != int(drop_chance):
+        elif int(round(df.iloc[-1, -1] * 100, 0)) != int(chance_input):
             most_likely_probability = df.iloc[-1, -1]
-            cdf_output = f"Uh-oh! You don't have {drop_chance}%, you have {int(round(most_likely_probability*100, 0))}% chance to receive at least one {selected_drop} from {selected_enemy} at {num_kills} kills."
+            cdf_output = f"Uh-oh! You don't have {chance_input}%, you have {int(round(most_likely_probability*100, 0))}% chance to receive at least one {selected_drop} from {selected_enemy} at {num_kills} kills."
             hit_rate = 0
 
         rarity_color, _ = get_rarity_color(rarity)
@@ -239,8 +263,8 @@ def plot_cdf(selected_enemy, selected_drop, num_kills, drop_chance):
                 type="line",
                 x0=min(x),
                 x1=max(x),
-                y0=drop_chance / 100,
-                y1=drop_chance / 100,
+                y0=chance_input / 100,
+                y1=chance_input / 100,
                 line=dict(color="black", width=2, dash="solid"),
             )
         return fig
@@ -248,13 +272,6 @@ def plot_cdf(selected_enemy, selected_drop, num_kills, drop_chance):
         return {
             "layout": {"title": "Select an enemy, item, and kill count to plot the CDF"}
         }
-
-
-def get_rarity_color(rarity):
-    for category, specs in RARITY_SPECS.items():
-        if specs["range"][0] >= rarity >= (specs["range"][1]):
-            return specs["color"], category
-    return "black", "Unknown"
 
 
 @app.callback(
@@ -298,6 +315,37 @@ def instance_info(selected_enemy, selected_drop, num_kills):
         ]
     else:
         return []
+
+
+@app.callback(
+    Output("graph-hist", "figure"),
+    [
+        Input("enemy-entry", "value"),
+        Input("item-dropdown", "value"),
+        Input("kill-count", "value"),
+    ],
+)
+def plot_hist(selected_enemy, selected_drop, num_kills):
+    if selected_enemy and selected_drop and num_kills != 0:
+        find_monster = search_monster(selected_enemy)
+        if find_monster:
+            drops = get_drops(find_monster)
+            rarity = get_rarity(drops, selected_drop)
+            simulation_results = run_simulation(rarity, num_kills, 1000)
+            print(simulation_results)
+            fig = px.histogram(
+                simulation_results,
+                x="Kills to Drop",
+                nbins=35,
+                title=f"Distribution of Kills if 1000 players killed {selected_enemy} for a {selected_drop} {num_kills} times",
+            )
+            fig.update_layout(title_x=0.5)
+            fig.show()
+            print("Returning figure...")
+            return fig
+    else:
+        print("Returning nothing...")
+        return None
 
 
 if __name__ == "__main__":

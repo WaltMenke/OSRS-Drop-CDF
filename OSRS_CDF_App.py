@@ -299,16 +299,16 @@ def instance_info(selected_enemy, selected_drop, num_kills):
             html.Span(
                 "RARITY: ",
                 style={
-                    "background-color": rarity_color,
-                    "font-size": "20px",
+                    "backgroundColor": rarity_color,
+                    "fontSize": "20px",
                     "fontFamily": "Helvetica",
                 },
             ),
             html.Span(
                 f"{rarity} ({rarity_category})",
                 style={
-                    "background-color": rarity_color,
-                    "font-size": "20px",
+                    "backgroundColor": rarity_color,
+                    "fontSize": "20px",
                     "fontFamily": "Helvetica",
                 },
             ),
@@ -326,13 +326,16 @@ def instance_info(selected_enemy, selected_drop, num_kills):
     ],
 )
 def plot_hist(selected_enemy, selected_drop, num_kills):
+    default_histogram = go.Figure(
+        data=[go.Histogram(x=[0, 1], y=[1, 1])],  # Flat histogram with equal counts
+        layout=go.Layout(title="Placeholder Histogram"),
+    )
     if selected_enemy and selected_drop and num_kills != 0:
         find_monster = search_monster(selected_enemy)
         if find_monster:
             drops = get_drops(find_monster)
             rarity = get_rarity(drops, selected_drop)
             simulation_results = run_simulation(rarity, num_kills, 1000)
-            print(simulation_results)
             fig = px.histogram(
                 simulation_results,
                 x="Kills to Drop",
@@ -340,12 +343,10 @@ def plot_hist(selected_enemy, selected_drop, num_kills):
                 title=f"Distribution of Kills if 1000 players killed {selected_enemy} for a {selected_drop} {num_kills} times",
             )
             fig.update_layout(title_x=0.5)
-            fig.show()
             print("Returning figure...")
             return fig
-    else:
-        print("Returning nothing...")
-        return None
+    print("Returning nothing...")
+    return default_histogram
 
 
 if __name__ == "__main__":

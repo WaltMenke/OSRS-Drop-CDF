@@ -4,11 +4,16 @@ import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd
 import numpy as np
+import os
+
+script_dir = os.path.dirname(os.path.abspath(__file__))
+os.chdir(script_dir)
 
 app = Dash(__name__)
 all_monsters = monsters_api.load()
 
 MAX_KILLS = 5000
+PLAYER_COUNT = 5000
 RARITY_SPECS = {
     "Always": {"color": "#AFEEEE", "range": (1 / 1, 1 / 1)},
     "Common": {"color": "#56E156", "range": (1 / 2, 1 / 25)},
@@ -43,6 +48,7 @@ app.layout = html.Div(
                 "fontFamily": "Helvetica",
             },
         ),
+        html.Img(src="./LOGO.png"),
         html.H4(
             children="Select or type in an enemy below",
             style={
@@ -125,8 +131,26 @@ app.layout = html.Div(
                 "justifyContent": "left",
             },
         ),
-        dcc.Graph(id="graph-cdf", style={"width": "80%", "margin": "auto"}),
-        dcc.Graph(id="graph-hist", style={"width": "80%", "margin": "auto"}),
+        html.Div(
+            [
+                dcc.Graph(
+                    id="graph-cdf",
+                    style={
+                        "width": "50%",
+                        "display": "inline-block",
+                        "textAlign": "center",
+                    },
+                ),
+                dcc.Graph(
+                    id="graph-hist",
+                    style={
+                        "width": "50%",
+                        "display": "inline-block",
+                        "textAlign": "center",
+                    },
+                ),
+            ],
+        ),
     ],
     className="justify-content-center",
 )
@@ -170,9 +194,9 @@ def get_rarity(drops_in, selected_drop):
 
 def get_rarity_color(rarity):
     for category, specs in RARITY_SPECS.items():
-        if specs["range"][0] >= rarity >= (specs["range"][1]):
+        if rarity >= specs["range"][1]:
             return specs["color"], category
-    return "black", "Unknown"
+    return "gray", "Unknown"
 
 
 def search_monster(monster_in):
@@ -188,12 +212,13 @@ def search_monster(monster_in):
 def run_simulation(rarity, num_kills, simulation_amount):
     output = []
     for _ in range(simulation_amount):
-        binom_gen = np.random.default_rng()
-        kills_to_drop = binom_gen.geometric(rarity, size=num_kills)
+        sim_gen = np.random.default_rng()
+        kills_to_drop = sim_gen.geometric(rarity, size=num_kills)
         if 1 not in kills_to_drop:
-            output.append(num_kills)
+            output.append(None)
         else:
-            output.append(list(kills_to_drop).index(1) + 1)
+            drop_index = list(kills_to_drop).index(1) + 1
+            output.append(drop_index)
     output = pd.DataFrame(output, columns=["Kills to Drop"])
     return output
 
@@ -228,11 +253,11 @@ def plot_cdf(selected_enemy, selected_drop, num_kills, chance_input):
             hit_rate = 1
         elif not filt_df.empty:
             kill_threshold = filt_df.iloc[0, 0]
-            cdf_output = f"{chance_input}% chance of receiving at least one {selected_drop} from {selected_enemy} at {kill_threshold} kills!"
+            cdf_output = f"{chance_input}% chance of receiving at least one <br><i>{selected_drop}</i> from <i>{selected_enemy}</i><br>at {kill_threshold} kills!"
             hit_rate = 1
         elif int(round(df.iloc[-1, -1] * 100, 0)) != int(chance_input):
             most_likely_probability = df.iloc[-1, -1]
-            cdf_output = f"Uh-oh! You don't have {chance_input}%, you have {int(round(most_likely_probability*100, 0))}% chance to receive at least one {selected_drop} from {selected_enemy} at {num_kills} kills."
+            cdf_output = f"Uh-oh! You don't have {chance_input}%, you have {int(round(most_likely_probability*100, 0))}% chance<br> to receive at least one <i>{selected_drop}</i> from<br><i>{selected_enemy}</i> at {num_kills} kills."
             hit_rate = 0
 
         rarity_color, _ = get_rarity_color(rarity)
@@ -259,18 +284,18 @@ def plot_cdf(selected_enemy, selected_drop, num_kills, chance_input):
             )
         )
         if hit_rate:
-            fig.add_shape(
-                type="line",
-                x0=min(x),
-                x1=max(x),
-                y0=chance_input / 100,
-                y1=chance_input / 100,
-                line=dict(color="black", width=2, dash="solid"),
+            text_position = "bottom right" if chance_input >= 10 else "top right"
+            fig.add_hline(
+                y=chance_input / 100,
+                annotation_text=f"{round(chance_input,1)}% chance",
+                annotation_position=text_position,
             )
         return fig
     else:
         return {
-            "layout": {"title": "Select an enemy, item, and kill count to plot the CDF"}
+            "layout": {
+                "title": "Select an enemy, item,<br>and kill count to plot the CDF"
+            }
         }
 
 
@@ -323,29 +348,46 @@ def instance_info(selected_enemy, selected_drop, num_kills):
         Input("enemy-entry", "value"),
         Input("item-dropdown", "value"),
         Input("kill-count", "value"),
+        Input("drop-test", "value"),
     ],
 )
-def plot_hist(selected_enemy, selected_drop, num_kills):
-    default_histogram = go.Figure(
-        data=[go.Histogram(x=[0, 1], y=[1, 1])],  # Flat histogram with equal counts
-        layout=go.Layout(title="Placeholder Histogram"),
+def plot_hist(selected_enemy, selected_drop, num_kills, chance_input):
+    default_histogram = px.histogram(
+        x=[0, 1],
+        y=[1, 1],
+        title="Select an enemy, item,<br>and kill count to plot the histogram",
     )
+    default_histogram.update_traces(marker_color="white")
+    default_histogram.update_xaxes(title_text="")
+    default_histogram.update_yaxes(title_text="")
+
     if selected_enemy and selected_drop and num_kills != 0:
         find_monster = search_monster(selected_enemy)
         if find_monster:
             drops = get_drops(find_monster)
             rarity = get_rarity(drops, selected_drop)
-            simulation_results = run_simulation(rarity, num_kills, 1000)
+            rarity_color, _ = get_rarity_color(rarity)
+            simulation_results = run_simulation(rarity, num_kills, PLAYER_COUNT)
+            no_drop = simulation_results["Kills to Drop"].isna().sum()
+            got_drop = (1 - (no_drop / len(simulation_results))) * 100
+            drop_marker = np.percentile(
+                simulation_results["Kills to Drop"].dropna(), chance_input
+            )
             fig = px.histogram(
                 simulation_results,
                 x="Kills to Drop",
                 nbins=35,
-                title=f"Distribution of Kills if 1000 players killed {selected_enemy} for a {selected_drop} {num_kills} times",
+                title=f"Distribution of Drops if 5000 players killed<br><i>{selected_enemy}</i> for a <i>{selected_drop}</i> {num_kills} times<br>{int(round(got_drop,0))}% of players received at least one!",
             )
+            fig.update_yaxes(title_text="Drops Obtained")
             fig.update_layout(title_x=0.5)
-            print("Returning figure...")
+            fig.update_traces(marker_color=rarity_color)
+            fig.add_vline(
+                x=drop_marker,
+                annotation_text=f"{round(chance_input,1)}% of players",
+                annotation_position="bottom right",
+            )
             return fig
-    print("Returning nothing...")
     return default_histogram
 
 

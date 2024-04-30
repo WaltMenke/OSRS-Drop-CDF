@@ -1,4 +1,5 @@
 from osrsbox import monsters_api
+import dash
 from dash import Dash, html, dcc, callback, Output, Input
 import plotly.express as px
 import plotly.graph_objects as go
@@ -40,6 +41,15 @@ def get_all_monsters(database):
 
 app.layout = html.Div(
     [
+        html.Img(
+            src=dash.get_asset_url("LOGO.png"),
+            style={
+                "display": "block",
+                "margin": "auto",
+                "width": "15%",
+                "height": "auto",
+            },
+        ),
         html.H1(
             children="Old School Runescape Drop Probabilities",
             style={

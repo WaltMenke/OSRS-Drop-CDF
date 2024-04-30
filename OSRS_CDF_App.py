@@ -48,88 +48,120 @@ app.layout = html.Div(
                 "fontFamily": "Helvetica",
             },
         ),
-        html.Img(src="./LOGO.png"),
-        html.H4(
-            children="Select or type in an enemy below",
-            style={
-                "textAlign": "center",
-                "backgroundColor": "#f2f2f2",
-                "fontFamily": "Helvetica",
-            },
-        ),
-        dcc.Dropdown(
-            options=get_all_monsters(all_monsters),
-            value=None,
-            id="enemy-entry",
-            multi=False,
-            style={
-                "textAlign": "center",
-                "width": "350px",
-                "margin": "auto",
-            },
-        ),
-        html.H4(
-            children="Select or type in the drop you'd like to test",
-            style={
-                "textAlign": "center",
-                "backgroundColor": "#f2f2f2",
-                "fontFamily": "Helvetica",
-            },
-        ),
-        dcc.Dropdown(
-            value=None,
-            id="item-dropdown",
-            multi=False,
-            style={
-                "textAlign": "center",
-                "width": "350px",
-                "margin": "auto",
-            },
-        ),
-        html.H4(
-            children="Drag the slider to select the simulated kill count",
-            style={
-                "textAlign": "center",
-                "backgroundColor": "#f2f2f2",
-                "fontFamily": "Helvetica",
-            },
-        ),
-        dcc.Slider(
-            0,
-            MAX_KILLS,
-            marks={
-                i: str(i) for i in range(1, MAX_KILLS + 1) if i % 250 == 0 or i == 1
-            },
-            value=500,
-            id="kill-count",
-            tooltip={"placement": "top", "always_visible": True},
-        ),
-        html.H4(
-            children="What drop percentage would you like to test?",
-            style={
-                "textAlign": "center",
-                "backgroundColor": "#f2f2f2",
-                "fontFamily": "Helvetica",
-            },
-        ),
-        dcc.Slider(
-            1,
-            99,
-            marks={
-                i: f"{i}%" for i in range(1, 100) if i % 10 == 0 or i == 1 or i == 99
-            },
-            value=80,
-            id="drop-test",
-            tooltip={"placement": "top", "always_visible": True},
+        html.Div(
+            [
+                html.Div(
+                    [
+                        html.H4(
+                            children="Select or type in an ENEMY below:",
+                            style={
+                                "textAlign": "center",
+                                "fontFamily": "Helvetica",
+                            },
+                        ),
+                        dcc.Dropdown(
+                            options=get_all_monsters(all_monsters),
+                            value=None,
+                            id="enemy-entry",
+                            multi=False,
+                            style={
+                                "textAlign": "center",
+                                "width": "350px",
+                                "margin": "auto",
+                            },
+                        ),
+                    ],
+                    style={"flex": "1", "margin-right": "10px"},
+                ),
+                html.Div(
+                    [
+                        html.P(
+                            id="info-div",
+                            children=[],
+                            style={
+                                "textAlign": "center",
+                                "fontFamily": "Helvetica",
+                                "margin": "auto",
+                            },
+                        ),
+                    ],
+                ),
+                html.Div(
+                    [
+                        html.H4(
+                            children="Select or type in the DROP you'd like to test:",
+                            style={
+                                "textAlign": "center",
+                                "fontFamily": "Helvetica",
+                            },
+                        ),
+                        dcc.Dropdown(
+                            value=None,
+                            id="item-dropdown",
+                            multi=False,
+                            style={
+                                "textAlign": "center",
+                                "width": "350px",
+                                "margin": "auto",
+                            },
+                        ),
+                    ],
+                    style={"flex": "1", "margin-left": "10px"},
+                ),
+            ],
+            style={"display": "flex"},
         ),
         html.Div(
-            id="info-div",
-            children=[],
-            style={
-                "textAlign": "center",
-                "whiteSpace": "pre-line",
-                "justifyContent": "left",
-            },
+            [
+                html.Div(
+                    [
+                        html.H4(
+                            children="Drag the slider to select the simulated kill count",
+                            style={
+                                "textAlign": "center",
+                                "fontFamily": "Helvetica",
+                            },
+                        ),
+                        dcc.Slider(
+                            0,
+                            MAX_KILLS,
+                            marks={
+                                i: str(i)
+                                for i in range(1, MAX_KILLS + 1)
+                                if i % 250 == 0 or i == 1
+                            },
+                            value=500,
+                            id="kill-count",
+                            tooltip={"placement": "top", "always_visible": True},
+                        ),
+                    ],
+                    style={"display": "inline-block", "width": "50%"},
+                ),
+                html.Div(
+                    [
+                        html.H4(
+                            children="What drop percentage would you like to test?",
+                            style={
+                                "textAlign": "center",
+                                "fontFamily": "Helvetica",
+                            },
+                        ),
+                        dcc.Slider(
+                            1,
+                            99,
+                            marks={
+                                i: f"{i}%"
+                                for i in range(1, 100)
+                                if i % 10 == 0 or i == 1 or i == 99
+                            },
+                            value=80,
+                            id="drop-test",
+                            tooltip={"placement": "top", "always_visible": True},
+                        ),
+                    ],
+                    style={"display": "inline-block", "width": "50%"},
+                ),
+            ]
         ),
         html.Div(
             [
@@ -172,7 +204,7 @@ def update_monster_options(monster):
 
 
 def calculate_cdf(rarity, kills):
-    """Based on the binomial distribution, probability of observing success at least once in kills amount of independent Bernoulli trials"""
+    """Based on the binomial distribution, probability of observing success at least once in 'kills' amount of independent Bernoulli trials."""
     cdf = 1 - (1 - rarity) ** kills
     return cdf
 
@@ -290,6 +322,7 @@ def plot_cdf(selected_enemy, selected_drop, num_kills, chance_input):
                 annotation_text=f"{round(chance_input,1)}% chance",
                 annotation_position=text_position,
             )
+        fig.update_yaxes(range=[0, 1])
         return fig
     else:
         return {
@@ -322,9 +355,9 @@ def instance_info(selected_enemy, selected_drop, num_kills):
             html.Br(),
             html.Br(),
             html.Span(
-                "RARITY: ",
+                "Rarity: ",
                 style={
-                    "backgroundColor": rarity_color,
+                    "color": rarity_color,
                     "fontSize": "20px",
                     "fontFamily": "Helvetica",
                 },
@@ -332,7 +365,7 @@ def instance_info(selected_enemy, selected_drop, num_kills):
             html.Span(
                 f"{rarity} ({rarity_category})",
                 style={
-                    "backgroundColor": rarity_color,
+                    "color": rarity_color,
                     "fontSize": "20px",
                     "fontFamily": "Helvetica",
                 },
@@ -368,6 +401,7 @@ def plot_hist(selected_enemy, selected_drop, num_kills, chance_input):
             rarity = get_rarity(drops, selected_drop)
             rarity_color, _ = get_rarity_color(rarity)
             simulation_results = run_simulation(rarity, num_kills, PLAYER_COUNT)
+
             no_drop = simulation_results["Kills to Drop"].isna().sum()
             got_drop = (1 - (no_drop / len(simulation_results))) * 100
             drop_marker = np.percentile(
@@ -377,7 +411,7 @@ def plot_hist(selected_enemy, selected_drop, num_kills, chance_input):
                 simulation_results,
                 x="Kills to Drop",
                 nbins=35,
-                title=f"Distribution of Drops if 5000 players killed<br><i>{selected_enemy}</i> for a <i>{selected_drop}</i> {num_kills} times<br>{int(round(got_drop,0))}% of players received at least one!",
+                title=f"If {PLAYER_COUNT} players killed<br><i>{selected_enemy}</i> for a <i>{selected_drop}</i> {num_kills} times<br>~{int(round(got_drop,0))}% of players received at least one!",
             )
             fig.update_yaxes(title_text="Drops Obtained")
             fig.update_layout(title_x=0.5)
@@ -388,6 +422,12 @@ def plot_hist(selected_enemy, selected_drop, num_kills, chance_input):
                 annotation_position="bottom right",
             )
             return fig
+    else:
+        return {
+            "layout": {
+                "title": "Select an enemy, item,<br>and kill count to plot the histogram"
+            }
+        }
     return default_histogram
 
 

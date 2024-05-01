@@ -1,0 +1,21 @@
+.rc-slider-track {
+  background-color: Burlywood;
+}
+
+.rc-slider-dot-active {  
+  border-color: Burlywood;
+  border: solid 2px Burlywood;
+}
+
+.rc-slider-handle {
+  background-color: Burlywood;
+  border-color: Burlywood;
+}
+
+.rc-slider-handle:hover {
+  border-color: Burlywood;
+}
+
+.rc-slider-handle-active:active {
+  border-color: Burlywood;
+}

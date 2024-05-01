@@ -1,6 +1,6 @@
 from osrsbox import monsters_api
 import dash
-from dash import Dash, html, dcc, callback, Output, Input
+from dash import Dash, html, dcc, callback, Output, Input, no_update, callback_context
 import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd
@@ -10,7 +10,8 @@ import os
 script_dir = os.path.dirname(os.path.abspath(__file__))
 os.chdir(script_dir)
 
-app = Dash(__name__)
+app = Dash(__name__, assets_folder="/assets")
+
 all_monsters = monsters_api.load()
 
 MAX_KILLS = 5000
@@ -183,6 +184,7 @@ app.layout = html.Div(
                         "textAlign": "center",
                     },
                 ),
+                dcc.Store(id="stored-graph-hist"),
                 dcc.Graph(
                     id="graph-hist",
                     style={
@@ -311,7 +313,7 @@ def plot_cdf(selected_enemy, selected_drop, num_kills, chance_input):
             title=cdf_output,
             color_discrete_sequence=rarity_color,
         )
-        fig.update_layout(title_x=0.5)
+        fig.update_layout(title_x=0.5, plot_bgcolor="white")
         fig.update_traces(line=dict(width=4))
         x = fig.data[0]["x"]
         y = fig.data[0]["y"]
@@ -395,15 +397,6 @@ def instance_info(selected_enemy, selected_drop, num_kills):
     ],
 )
 def plot_hist(selected_enemy, selected_drop, num_kills, chance_input):
-    default_histogram = px.histogram(
-        x=[0, 1],
-        y=[1, 1],
-        title="Select an enemy, item,<br>and kill count to plot the histogram",
-    )
-    default_histogram.update_traces(marker_color="white")
-    default_histogram.update_xaxes(title_text="")
-    default_histogram.update_yaxes(title_text="")
-
     if selected_enemy and selected_drop and num_kills != 0:
         find_monster = search_monster(selected_enemy)
         if find_monster:
@@ -421,10 +414,10 @@ def plot_hist(selected_enemy, selected_drop, num_kills, chance_input):
                 simulation_results,
                 x="Kills to Drop",
                 nbins=35,
-                title=f"If {PLAYER_COUNT} players killed<br><i>{selected_enemy}</i> for a <i>{selected_drop}</i> {num_kills} times<br>~{int(round(got_drop,0))}% of players received at least one!",
+                title=f"If {PLAYER_COUNT} players killed<br><i>{selected_enemy}</i> for a <i>{selected_drop}</i> {num_kills} times<br>~{int(round(got_drop,0))}% of players would receive at least one!",
             )
             fig.update_yaxes(title_text="Drops Obtained")
-            fig.update_layout(title_x=0.5)
+            fig.update_layout(title_x=0.5, plot_bgcolor="white")
             fig.update_traces(marker_color=rarity_color)
             fig.add_vline(
                 x=drop_marker,
@@ -438,7 +431,7 @@ def plot_hist(selected_enemy, selected_drop, num_kills, chance_input):
                 "title": "Select an enemy, item,<br>and kill count to plot the histogram"
             }
         }
-    return default_histogram
+    return
 
 
 if __name__ == "__main__":

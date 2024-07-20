@@ -1,4 +1,4 @@
-# OSRS_Drop_CDF
+# OSRS-Drop-CDF
 ![OSRS_LOGO](assets/LOGO.png)
 
 ## Purpose
@@ -12,5 +12,8 @@ This program allows you to explore the statistics of Old School Runescape monste
 It is HIGHLY recommended to use a virtual environment and use:
 `pip install -r requirements.txt` 
 to obtain the required packages and version as easily as possible.
+
+## What's a CDF?
+Check it out [here](https://en.wikipedia.org/wiki/Cumulative_distribution_function)!
 
 Please reach out to me if you have feedback, bug reports, etc! This project is my very first foray into Dash apps, and I have zero experience with teh OSRS Wiki APIs (feel free to fork and help out in that sense for getting the JSONs updated).

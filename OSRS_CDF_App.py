@@ -1,4 +1,4 @@
-from osrsreboxed import monsters_api
+from osrsbox import monsters_api
 import dash
 from dash import Dash, html, dcc, callback, Output, Input, no_update, callback_context
 import plotly.express as px

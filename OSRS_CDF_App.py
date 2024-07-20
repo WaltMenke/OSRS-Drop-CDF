@@ -1,4 +1,4 @@
-from osrsbox import monsters_api
+from osrsreboxed import monsters_api
 import dash
 from dash import Dash, html, dcc, callback, Output, Input, no_update, callback_context
 import plotly.express as px
@@ -10,7 +10,7 @@ import os
 script_dir = os.path.dirname(os.path.abspath(__file__))
 os.chdir(script_dir)
 
-app = Dash(__name__, assets_folder="/assets")
+app = Dash(__name__, assets_folder="assets", external_stylesheets=["/assets/style.css"])
 
 all_monsters = monsters_api.load()
 
@@ -134,12 +134,12 @@ app.layout = html.Div(
                             },
                         ),
                         dcc.Slider(
-                            0,
-                            MAX_KILLS,
+                            min=1,
+                            max=MAX_KILLS,
                             marks={
                                 i: str(i)
                                 for i in range(1, MAX_KILLS + 1)
-                                if i % 250 == 0 or i == 1
+                                if i % 500 == 0 or i == 1
                             },
                             value=500,
                             id="kill-count",
@@ -212,7 +212,7 @@ def update_monster_options(monster):
         else:
             return [{"label": "No items found", "value": "None"}]
     else:
-        return [{"label": "Enter monster name first", "value": "None"}]
+        return [{"label": "Enter monster name first!", "value": "None"}]
 
 
 def calculate_cdf(rarity, kills):
@@ -277,7 +277,7 @@ def run_simulation(rarity, num_kills, simulation_amount):
     ],
 )
 def plot_cdf(selected_enemy, selected_drop, num_kills, chance_input):
-    if selected_enemy and selected_drop and num_kills != 0:
+    if selected_enemy and selected_drop:
         find_monster = search_monster(selected_enemy)
         if find_monster:
             drops = get_drops(find_monster)
@@ -372,14 +372,16 @@ def instance_info(selected_enemy, selected_drop, num_kills):
                     "color": rarity_color,
                     "fontSize": "20px",
                     "fontFamily": "Helvetica",
+                    "fontWeight": "bold",
                 },
             ),
             html.Span(
-                f"{rarity} ({rarity_category})",
+                f"{rarity}({rarity_category})",
                 style={
                     "color": rarity_color,
                     "fontSize": "20px",
                     "fontFamily": "Helvetica",
+                    "fontWeight": "bold",
                 },
             ),
         ]
@@ -404,26 +406,20 @@ def plot_hist(selected_enemy, selected_drop, num_kills, chance_input):
             rarity = get_rarity(drops, selected_drop)
             rarity_color, _ = get_rarity_color(rarity)
             simulation_results = run_simulation(rarity, num_kills, PLAYER_COUNT)
-
             no_drop = simulation_results["Kills to Drop"].isna().sum()
             got_drop = (1 - (no_drop / len(simulation_results))) * 100
-            drop_marker = np.percentile(
-                simulation_results["Kills to Drop"].dropna(), chance_input
-            )
+            hist_title = f"If {PLAYER_COUNT} players killed<br><i>{selected_enemy}</i> for a <i>{selected_drop}</i> {num_kills} times<br>~{int(round(got_drop,0))}% of players would receive at least one!"
+            if int(rarity) == 1:
+                hist_title = f"You always get {selected_drop} from {selected_enemy}!"
             fig = px.histogram(
                 simulation_results,
                 x="Kills to Drop",
                 nbins=35,
-                title=f"If {PLAYER_COUNT} players killed<br><i>{selected_enemy}</i> for a <i>{selected_drop}</i> {num_kills} times<br>~{int(round(got_drop,0))}% of players would receive at least one!",
+                title=hist_title,
             )
             fig.update_yaxes(title_text="Drops Obtained")
             fig.update_layout(title_x=0.5, plot_bgcolor="white")
             fig.update_traces(marker_color=rarity_color)
-            fig.add_vline(
-                x=drop_marker,
-                annotation_text=f"{round(chance_input,1)}% of players",
-                annotation_position="bottom right",
-            )
             return fig
     else:
         return {

@@ -16,4 +16,4 @@ to obtain the required packages and version as easily as possible.
 ## What's a CDF?
 Check it out [here](https://en.wikipedia.org/wiki/Cumulative_distribution_function)!
 
-Please reach out to me if you have feedback, bug reports, etc! This project is my very first foray into Dash apps, and I have zero experience with teh OSRS Wiki APIs (feel free to fork and help out in that sense for getting the JSONs updated).
+Please reach out to me if you have feedback, bug reports, etc! This project is my very first foray into Dash apps, and I have zero experience with the OSRS Wiki APIs (feel free to fork and help out in that sense for getting the JSONs updated).

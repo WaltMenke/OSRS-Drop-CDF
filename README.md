@@ -8,7 +8,7 @@ This program allows you to explore the statistics of Old School Runescape monste
 * Fix the histogram functionality where it will constantly update even if a slider is clicked on in the same position.
 * Implement objects such as the Lunar Chest, Chest (Tombs of Amascut), etc. 
 
-## Dashboard Screeshot
+## Dashboard Screenshot
 ![MainScreenCDF](assets/MainScreenCDF.png)
 
 ## Package Installation
